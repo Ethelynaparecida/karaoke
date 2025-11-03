@@ -1,0 +1,47 @@
+services:
+
+  - type: psql
+    name: karaoke-db
+    plan: free
+
+  - type: web
+    name: mariamole
+    env: java
+    plan: free 
+    rootDir: mariamole 
+    buildFilter:
+      paths:
+      - mariamole/** 
+    build:
+      command: ./mvnw clean install #
+    startCommand: java -jar target/mariamole-0.0.1-SNAPSHOT.jar 
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromService:
+          type: psql
+          name: karaoke-db
+          property: connectionString
+      - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+        value: org.postgresql.Driver
+      - key: SPRING_JPA_DATABASE_PLATFORM
+        value: org.hibernate.dialect.PostgreSQLDialect
+      - key: YOUTUBE_API_KEY
+        group: karaoke-secrets 
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+        
+
+  - type: static
+    name: karaoke-frontend
+    plan: free
+    rootDir: fe 
+    buildFilter:
+      paths:
+      - fe/** 
+    build:
+      command: npm install && ng build
+    publishDir: dist/mariamole 
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
