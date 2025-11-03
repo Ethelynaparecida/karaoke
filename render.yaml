@@ -8,7 +8,6 @@ services:
   
   - type: web
     name: mariamole
-    env: java
     plan: free
     rootDir: mariamole
     buildCommand: ./mvnw clean install
@@ -26,6 +25,6 @@ services:
       - key: SPRING_JPA_DATABASE_PLATFORM
         value: org.hibernate.dialect.PostgreSQLDialect
       - key: YOUTUBE_API_KEY
-        group: karaoke-secrets
+        fromGroup: karaoke-secrets
       - key: SPRING_PROFILES_ACTIVE
         value: prod
