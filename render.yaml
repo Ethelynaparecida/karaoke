@@ -1,8 +1,10 @@
-services:
+databases:
+  - name: karaoke-db   
+    plan: free         
+    databaseName: karaoke_db 
+    user: karaoke_10wd_user
 
-  - type: postgres
-    name: karaoke-db
-    plan: free
+services:
 
   - type: web
     name: mariamole
@@ -17,9 +19,8 @@ services:
     startCommand: java -jar target/mariamole-0.0.1-SNAPSHOT.jar 
     envVars:
       - key: SPRING_DATASOURCE_URL
-        fromService:
-          type: postgres
-          name: karaoke-db
+        fromDatabase:
+          name: karaoke-db      
           property: connectionString
       - key: SPRING_DATASOURCE_DRIVER_CLASS_NAME
         value: org.postgresql.Driver
