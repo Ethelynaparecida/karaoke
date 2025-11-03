@@ -30,14 +30,13 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
 
-  - type: web
+  - type: static          
     name: karaoke-frontend
-    runtime: static
     plan: free
     rootDir: fe
     buildCommand: npm install && ng build
-    publishDir: dist/mariamole 
-    buildFilter: 
+    publishPath: dist/mariamole 
+    buildFilter:
       paths:
       - fe/**
     routes:
