@@ -13,7 +13,7 @@ services:
       paths:
       - mariamole/** 
     build:
-      command: ./mvnw clean install #
+      command: ./mvnw clean install 
     startCommand: java -jar target/mariamole-0.0.1-SNAPSHOT.jar 
     envVars:
       - key: SPRING_DATASOURCE_URL
