@@ -32,8 +32,9 @@ services:
         value: prod
         
 
-  - type: static
+  - type: web
     name: karaoke-frontend
+    runtime: static
     plan: free
     rootDir: fe 
     buildFilter:
