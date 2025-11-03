@@ -32,8 +32,8 @@ build/
 ### VS Code ###
 .vscode/
 
-/mariamole/target/
-/mariamole/src/main/resources/application-local.properties
+/target/
+/src/main/resources/application-local.properties
 /backend/*.log
 /fe/node_modules/
 /fe/dist/
