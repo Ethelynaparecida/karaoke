@@ -20,7 +20,7 @@ FROM eclipse-temurin:21-jre-alpine
 
 WORKDIR /app
 
-COPY --from=build /app/target/mariamole-0.0.1-SNAPSHOT.jar app.jar
+COPY --from=build /app/target/demo-0.0.1-SNAPSHOT.jar app.jar
 
 
 EXPOSE 8080
