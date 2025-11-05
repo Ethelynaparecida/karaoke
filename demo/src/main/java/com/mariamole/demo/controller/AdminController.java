@@ -48,7 +48,9 @@ public class AdminController {
     @PostMapping("/player/skip")
     public ResponseEntity<?> skipSong() {
         boolean skipped = musicQueueController.pularMusicaAtual();
+        
         if (skipped) {
+            playerStateService.skip();
             return ResponseEntity.ok().body(Map.of("message", "Música pulada."));
         } else {
             return ResponseEntity.status(404).body(Map.of("message", "Nenhuma música a tocar para pular."));
@@ -75,5 +77,12 @@ public class AdminController {
         playerStateService.play();
         System.out.println("ADMIN: Player a TOCAR (play)");
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/player/restart")
+    public ResponseEntity<?> restartSong() {
+        playerStateService.restart();
+        System.out.println("ADMIN: Comando 'Recomeçar' enviado.");
+        return ResponseEntity.ok().body(Map.of("message", "Música reiniciada."));
     }
 }

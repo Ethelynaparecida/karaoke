@@ -37,7 +37,10 @@ public class YouTubeService {
                 searchRequest.setKey(apiKey);     
         searchRequest.setQ(query);          
         searchRequest.setType(Collections.singletonList("video")); 
-        searchRequest.setMaxResults(15L);  
+        searchRequest.setMaxResults(15L); 
+        searchRequest.setVideoEmbeddable("true");
         return searchRequest.execute();
+
+        
     }
 }

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mariamole.demo.service.PlayerStateService;
 
+import java.util.HashMap;
 import java.util.Map; 
 
 @RestController
@@ -26,6 +27,12 @@ public class PlayerStatusController {
 
     @GetMapping("/status")
     public ResponseEntity<?> getStatus() {
-        return ResponseEntity.ok(Map.of("isPaused", playerStateService.isPaused()));
+        
+        Map<String, Object> status = new HashMap<>();
+        status.put("isPaused", playerStateService.isPaused());
+        status.put("lastRestartRequestTime", playerStateService.getLastRestartRequestTime());
+        status.put("lastSkipRequestTime", playerStateService.getLastSkipRequestTime());
+        
+        return ResponseEntity.ok(status);
     }
 }
