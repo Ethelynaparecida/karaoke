@@ -6,19 +6,19 @@ public class MusicaFila {
     private String videoId;
     private String titulo; 
     private String nomeUsuario; 
-    private String cpfUsuario; 
+    private String telefoneusuario; 
     private boolean jaTocou;
 
-    public MusicaFila(String videoId, String titulo, String nomeUsuario, String cpfUsuario) {
+    public MusicaFila(String videoId, String titulo, String nomeUsuario, String telefoneusuario) {
         this.videoId = videoId;
         this.titulo = titulo;
         this.nomeUsuario = nomeUsuario;
-        this.cpfUsuario = cpfUsuario;
+        this.telefoneusuario = telefoneusuario;
         this.jaTocou = false;
     }
 
-    public String getCpfUsuario() {
-        return cpfUsuario;
+    public String getTelefoneUsuario() {
+        return telefoneusuario;
     }
 
     public String getNomeUsuario() {

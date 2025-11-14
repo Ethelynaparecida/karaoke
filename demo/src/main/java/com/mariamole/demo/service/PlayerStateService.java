@@ -33,7 +33,6 @@ public class PlayerStateService {
   }
   public void skip() {
         this.lastSkipRequestTime.set(System.currentTimeMillis());
-        // Também garantimos que o sistema não está em pausa
         this.isPaused.set(false);
     }
 

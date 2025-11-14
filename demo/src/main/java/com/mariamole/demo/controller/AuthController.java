@@ -27,29 +27,26 @@ public class AuthController {
         
         String nome = payload.get("nome");
         String email = payload.get("email");
-        String cpf = payload.get("cpf");
+        String telefone = payload.get("telefone");
 
-        if (nome == null || email == null || cpf == null) {
+        if (nome == null || email == null || telefone == null) {
             return ResponseEntity.badRequest().body("Dados de login incompletos.");
         }
-        Optional<Usuario> optUsuario = usuarioRepository.findByCpf(cpf);
+        Optional<Usuario> optUsuario = usuarioRepository.findByTelefone(telefone);
 
         if (optUsuario.isPresent()) {
             Usuario usuarioExistente = optUsuario.get();
-            usuarioExistente.setNome(nome); 
-            usuarioExistente.setEmail(email); 
+            usuarioExistente.setNome(nome);
+            usuarioExistente.setEmail(email);
             usuarioExistente.setUltimoLogin(LocalDateTime.now());
-            
-            usuarioRepository.save(usuarioExistente); 
-            System.out.println("Login (Atualização) para o CPF: " + cpf);
+            usuarioRepository.save(usuarioExistente);
 
         } else {
-            Usuario novoUsuario = new Usuario(nome, email, cpf);
-            usuarioRepository.save(novoUsuario); 
-            System.out.println("Login (Novo Utilizador) para o CPF: " + cpf);
+           Usuario novoUsuario = new Usuario(nome, email, telefone); 
+            usuarioRepository.save(novoUsuario);
         }
 
-        System.out.println("Login recebido para o CPF: " + cpf + " (Nome: " + nome + ")");
+        System.out.println("Login recebido para o Telefone: " + telefone + " (Nome: " + nome + ")");
         
         return ResponseEntity.ok().body("Login bem-sucedido.");
     }

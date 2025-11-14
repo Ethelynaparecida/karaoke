@@ -14,8 +14,7 @@ public class HistoricoMusica {
     private Long id;
 
     private String nomeUsuario;
-    private String cpfUsuario; 
-    private String videoId;
+    private String telefoneUsuario;    private String videoId;
     private String titulo;
 
     private LocalDateTime horarioCadastro; 
@@ -23,9 +22,9 @@ public class HistoricoMusica {
 
     public HistoricoMusica() {}
 
-    public HistoricoMusica(String nomeUsuario, String cpfUsuario, String videoId, String titulo, LocalDateTime horarioCadastro) {
+    public HistoricoMusica(String nomeUsuario, String telefoneUsuario, String videoId, String titulo, LocalDateTime horarioCadastro) {
         this.nomeUsuario = nomeUsuario;
-        this.cpfUsuario = cpfUsuario;
+        this.telefoneUsuario = telefoneUsuario;
         this.videoId = videoId;
         this.titulo = titulo;
         this.horarioCadastro = horarioCadastro;
@@ -47,13 +46,8 @@ public class HistoricoMusica {
         this.nomeUsuario = nomeUsuario;
     }
 
-    public String getCpfUsuario() {
-        return cpfUsuario;
-    }
-
-    public void setCpfUsuario(String cpfUsuario) {
-        this.cpfUsuario = cpfUsuario;
-    }
+    public String getTelefoneUsuario() { return telefoneUsuario; } 
+    public void setTelefoneUsuario(String telefoneUsuario) { this.telefoneUsuario = telefoneUsuario; }
 
     public String getVideoId() {
         return videoId;

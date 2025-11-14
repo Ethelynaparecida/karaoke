@@ -14,5 +14,6 @@ public interface HistoricoMusicaRepository extends JpaRepository<HistoricoMusica
 
     List<HistoricoMusica> findByHorarioCadastroBetween(LocalDateTime start, LocalDateTime end);
 
-    Optional<HistoricoMusica> findFirstByVideoIdAndCpfUsuarioAndHorarioExibicaoIsNullOrderByHorarioCadastroDesc(String videoId, String cpfUsuario);
+Optional<HistoricoMusica> findFirstByVideoIdAndTelefoneUsuarioAndHorarioExibicaoIsNullOrderByHorarioCadastroDesc(String videoId, String telefoneUsuario);
+    void deleteByHorarioCadastroBefore(LocalDateTime cutoffDate);
 }
