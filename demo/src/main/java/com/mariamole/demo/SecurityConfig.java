@@ -18,8 +18,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // 1. Diga ao Spring Security para usar a nossa configuração CORS (abaixo)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            
+            // 2. Desative o CSRF (ESSENCIAL para o POST funcionar)
             .csrf(AbstractHttpConfigurer::disable)
+            
+            // 3. Autorize todos os pedidos
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             );
@@ -31,19 +36,21 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
+        // 4. Permita o seu frontend (local e no Render)
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200", 
-            "https://mariamolefe.onrender.com" 
+            "https://mariamolefe.onrender.com" // A sua URL de produção
         ));
         
+        // 5. Permita os métodos que usamos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
         configuration.setAllowCredentials(true);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); 
+        source.registerCorsConfiguration("/**", configuration); // Aplica a todas as rotas
+        
         return source;
     }
 }

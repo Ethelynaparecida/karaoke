@@ -5,17 +5,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.mariamole.demo.model.HistoricoMusica;
 import com.mariamole.demo.model.MusicaFila;
 import com.mariamole.demo.repository.HistoricoMusicaRepository;
+import com.mariamole.demo.service.PlayerStateService;
 
 @RestController
 @RequestMapping("/api/queue")
@@ -23,12 +29,13 @@ import com.mariamole.demo.repository.HistoricoMusicaRepository;
 public class MusicQueueController {
 
   private final List<MusicaFila> songQueue = new java.util.concurrent.CopyOnWriteArrayList<>();
-
+  private final PlayerStateService playerStateService;
   private final HistoricoMusicaRepository historicoRepository;
 
   @Autowired
-  public MusicQueueController(HistoricoMusicaRepository historicoRepository) {
+  public MusicQueueController(HistoricoMusicaRepository historicoRepository, PlayerStateService playerStateService) {
     this.historicoRepository = historicoRepository;
+    this.playerStateService = playerStateService;
   }
 
   @GetMapping("/next")
@@ -64,6 +71,11 @@ public class MusicQueueController {
 
   @PostMapping("/add")
   public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload) {
+    if (playerStateService.isQueueLocked()) {
+            System.out.println("Tentou adicionar música, mas a fila está bloqueada.");
+            
+            return ResponseEntity.status(HttpStatus.LOCKED).body("A fila está temporariamente fechada pelo admin.");
+        }
     String telefone = payload.get("telefone");
     String videoId = payload.get("videoId");
     String titulo = payload.get("titulo");

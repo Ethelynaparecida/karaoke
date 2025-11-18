@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface HistoricoMusicaRepository extends JpaRepository<HistoricoMusica, Long> {
 
-    List<HistoricoMusica> findByHorarioCadastroBetween(LocalDateTime start, LocalDateTime end);
+    List<HistoricoMusica> findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(LocalDateTime start, LocalDateTime end);
 
 Optional<HistoricoMusica> findFirstByVideoIdAndTelefoneUsuarioAndHorarioExibicaoIsNullOrderByHorarioCadastroDesc(String videoId, String telefoneUsuario);
     void deleteByHorarioCadastroBefore(LocalDateTime cutoffDate);

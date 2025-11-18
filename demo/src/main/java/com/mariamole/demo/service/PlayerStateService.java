@@ -2,6 +2,7 @@ package com.mariamole.demo.service;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,6 +12,8 @@ public class PlayerStateService {
 
   private final AtomicLong lastRestartRequestTime = new AtomicLong(0L);
   private final AtomicLong lastSkipRequestTime = new AtomicLong(0L);
+
+  private final AtomicBoolean queueLocked = new AtomicBoolean(false);
 
   public void pause() {
     this.isPaused.set(true);
@@ -38,5 +41,17 @@ public class PlayerStateService {
 
     public long getLastSkipRequestTime() {
         return this.lastSkipRequestTime.get();
+    }
+
+    public void lockQueue() {
+        this.queueLocked.set(true);
+    }
+
+    public void unlockQueue() {
+        this.queueLocked.set(false);
+    }
+
+    public boolean isQueueLocked() {
+        return this.queueLocked.get();
     }
 }

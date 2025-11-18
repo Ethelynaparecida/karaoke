@@ -1,5 +1,8 @@
 package com.mariamole.demo.controller;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -7,10 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mariamole.demo.service.PlayerStateService;
-
-import java.util.HashMap;
-import java.util.Map; 
+import com.mariamole.demo.service.PlayerStateService; 
 
 @RestController
 @RequestMapping("/api/player")
@@ -32,6 +32,8 @@ public class PlayerStatusController {
         status.put("isPaused", playerStateService.isPaused());
         status.put("lastRestartRequestTime", playerStateService.getLastRestartRequestTime());
         status.put("lastSkipRequestTime", playerStateService.getLastSkipRequestTime());
+
+        status.put("isQueueLocked", playerStateService.isQueueLocked());
         
         return ResponseEntity.ok(status);
     }

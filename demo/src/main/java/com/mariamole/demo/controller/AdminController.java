@@ -1,9 +1,9 @@
 package com.mariamole.demo.controller;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -67,7 +67,7 @@ public class AdminController {
     public ResponseEntity<List<HistoricoMusica>> getLogDoDia() {
         LocalDateTime fim = LocalDateTime.now();
         LocalDateTime inicio = fim.minusHours(4);
-        List<HistoricoMusica> log = historicoRepository.findByHorarioCadastroBetween(inicio, fim);
+       List<HistoricoMusica> log = historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(inicio, fim);
 
         return ResponseEntity.ok(log);
     }
@@ -141,5 +141,19 @@ public class AdminController {
 
         musicQueueController.adicionarMusicaComoAdmin(novaMusica);
         return ResponseEntity.ok(Map.of("message", "Música adicionada pelo admin."));
+    }
+
+    @PostMapping("/queue/lock")
+    public ResponseEntity<?> lockQueue() {
+        playerStateService.lockQueue();
+        System.out.println("ADMIN: Fila de músicas BLOQUEADA");
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/queue/unlock")
+    public ResponseEntity<?> unlockQueue() {
+        playerStateService.unlockQueue();
+        System.out.println("ADMIN: Fila de músicas DESBLOQUEADA");
+        return ResponseEntity.ok().build();
     }
 }
