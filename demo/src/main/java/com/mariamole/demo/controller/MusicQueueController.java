@@ -1,11 +1,8 @@
 package com.mariamole.demo.controller;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,9 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mariamole.demo.model.HistoricoMusica;
 import com.mariamole.demo.model.MusicaFila;
-import com.mariamole.demo.repository.HistoricoMusicaRepository;
+import com.mariamole.demo.service.MusicQueueService;
 import com.mariamole.demo.service.PlayerStateService;
 
 @RestController
@@ -28,169 +24,98 @@ import com.mariamole.demo.service.PlayerStateService;
 @CrossOrigin(origins = "*")
 public class MusicQueueController {
 
-  private final List<MusicaFila> songQueue = new java.util.concurrent.CopyOnWriteArrayList<>();
-  private final PlayerStateService playerStateService;
-  private final HistoricoMusicaRepository historicoRepository;
+    private final MusicQueueService musicQueueService;
+    private final PlayerStateService playerStateService; // Injetado para verificação de bloqueio
 
-  @Autowired
-  public MusicQueueController(HistoricoMusicaRepository historicoRepository, PlayerStateService playerStateService) {
-    this.historicoRepository = historicoRepository;
-    this.playerStateService = playerStateService;
-  }
-
-  @GetMapping("/next")
-  public ResponseEntity<?> getNextSong() {
-    for (MusicaFila musica : songQueue) {
-      if (!musica.isJaTocou()) {
-        atualizarHorarioExibicao(musica);
-
-        return ResponseEntity.ok(musica);
-      }
-    }
-    return ResponseEntity.ok().build();
-  }
-
-  @PostMapping("/complete")
-  public ResponseEntity<?> completeSong(
-      @RequestBody Map<String, String> payload) {
-    String videoId = payload.get("videoId");
-    if (videoId == null) {
-      return ResponseEntity.badRequest().body("Missing videoId");
+    @Autowired
+    public MusicQueueController(MusicQueueService musicQueueService, 
+                                PlayerStateService playerStateService) {
+        this.musicQueueService = musicQueueService;
+        this.playerStateService = playerStateService;
     }
 
-    songQueue
-        .stream()
-        .filter(musica -> musica.getVideoId().equals(videoId) && !musica.isJaTocou())
-        .findFirst()
-        .ifPresent(musica -> musica.setJaTocou(true));
-
-    songQueue.removeIf(musica -> musica.getVideoId().equals(videoId) && musica.isJaTocou());
-
-    return ResponseEntity.ok().build();
-  }
-
-  @PostMapping("/add")
-  public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload) {
-    if (playerStateService.isQueueLocked()) {
-            System.out.println("Tentou adicionar música, mas a fila está bloqueada.");
-            
+    /**
+     * POST /api/queue/add: Adiciona música à fila (Ação do Utilizador).
+     */
+    @PostMapping("/add")
+    public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload) {
+        
+        // 1. Verificação de Bloqueio (Única lógica de negócio no Controller)
+        if (playerStateService.isQueueLocked()) {
             return ResponseEntity.status(HttpStatus.LOCKED).body("A fila está temporariamente fechada pelo admin.");
         }
-    String telefone = payload.get("telefone");
-    String videoId = payload.get("videoId");
-    String titulo = payload.get("titulo");
-    String nome = payload.get("nome");
 
-    if (telefone == null || videoId == null || nome == null || titulo == null) {
-      return ResponseEntity.badRequest().body("Dados incompletos.");
-    }
-    boolean jaTemMusica = songQueue.stream()
-        .anyMatch(m -> m.getTelefoneUsuario().equals(telefone) && !m.isJaTocou());
+        String telefone = payload.get("telefone");
+        String videoId = payload.get("videoId");
+        String titulo = payload.get("titulo");
+        String nome = payload.get("nome");
 
-    if (jaTemMusica) {
-      return ResponseEntity
-          .status(409)
-          .body("Utilizador já tem uma música na fila.");
-    }
+        if (telefone == null || videoId == null || nome == null || titulo == null) {
+            return ResponseEntity.badRequest().body("Dados incompletos.");
+        }
+        
+        // 2. Chama a Lógica de Serviço
+        int position = musicQueueService.addSong(telefone, videoId, titulo, nome);
+        
+        // 3. Trata a Resposta do Serviço
+        if (position == -2) { // -2 significa que o utilizador já tem música
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Utilizador já tem uma música na fila.");
+        }
 
-    MusicaFila novaMusica = new MusicaFila(videoId, titulo, nome, telefone);
-    songQueue.add(novaMusica);
-
-    try {
-      HistoricoMusica historico = new HistoricoMusica(
-          nome,
-          telefone,
-          videoId,
-          titulo,
-          LocalDateTime.now());
-      historicoRepository.save(historico);
-    } catch (Exception e) {
-      System.err.println("Falha ao salvar no histórico: " + e.getMessage());
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Música adicionada!");
+        response.put("position", position);
+        
+        return ResponseEntity.ok(response);
     }
 
-    int position = getPosicaoPorTelefone(telefone);
-    Map<String, Object> response = new HashMap<>();
-    response.put("message", "Música adicionada!");
-    response.put("position", position);
-
-    return ResponseEntity.ok(response);
-  }
-
-  @GetMapping("/position/{telefone}")
-  public ResponseEntity<?> getPosition(@PathVariable String telefone) {
-    int position = getPosicaoPorTelefone(telefone);
-
-    Map<String, Object> response = new HashMap<>();
-    response.put("position", position);
-
-    return ResponseEntity.ok(response);
-  }
-
-  private void atualizarHorarioExibicao(MusicaFila musica) {
-    try {
-Optional<HistoricoMusica> optHistorico = historicoRepository
-                .findFirstByVideoIdAndTelefoneUsuarioAndHorarioExibicaoIsNullOrderByHorarioCadastroDesc( 
-                    musica.getVideoId(), musica.getTelefoneUsuario());
-
-      if (optHistorico.isPresent()) {
-        HistoricoMusica historico = optHistorico.get();
-        historico.setHorarioExibicao(LocalDateTime.now());
-        historicoRepository.save(historico);
-      }
-    } catch (Exception e) {
-      System.err.println(
-        "Falha ao atualizar horário de exibição: " + e.getMessage()
-      );
-    }
-  }
-
-  private int getPosicaoPorTelefone(String telefone) {
-    List<MusicaFila> filaPorTocar = songQueue
-        .stream()
-        .filter(m -> !m.isJaTocou())
-        .collect(Collectors.toList());
-
-    for (int i = 0; i < filaPorTocar.size(); i++) {
-      if (filaPorTocar.get(i).getTelefoneUsuario().equals(telefone)) {
-        return i; // 0 = tocando agora, 1 = próxima
-      }
+    /**
+     * GET /api/queue/next: Obtém a próxima música para o Player (TV).
+     */
+    @GetMapping("/next")
+    public ResponseEntity<?> getNextSong() {
+        Optional<MusicaFila> nextSongOpt = musicQueueService.getNextSong();
+        
+        if (nextSongOpt.isPresent()) {
+            return ResponseEntity.ok(nextSongOpt.get()); 
+        }
+        return ResponseEntity.ok().build(); // Fila vazia
     }
 
-    return -1;
-  }
-
-  public boolean pularMusicaAtual() {
-    Optional<MusicaFila> musicaParaPularOpt = songQueue
-        .stream()
-        .filter(m -> !m.isJaTocou())
-        .findFirst();
-
-    if (musicaParaPularOpt.isPresent()) {
-      MusicaFila musicaParaPular = musicaParaPularOpt.get();
-
-      musicaParaPular.setJaTocou(true);
-      songQueue.remove(musicaParaPular);
-      atualizarHorarioExibicao(musicaParaPular);
-
-      System.out.println(
-          "ADMIN: Música pulada: " + musicaParaPular.getTitulo());
-      return true;
+    /**
+     * POST /api/queue/complete: Marca a música como tocada (Ação do Player).
+     */
+    @PostMapping("/complete")
+    public ResponseEntity<?> completeSong(@RequestBody Map<String, String> payload) {
+        String videoId = payload.get("videoId");
+        if (videoId == null) {
+            return ResponseEntity.badRequest().body("Missing videoId");
+        }
+        
+        musicQueueService.completeSong(videoId);
+        return ResponseEntity.ok().build();
+    }
+    
+    /**
+     * POST /api/queue/remove-by-user/{userId} - Remove música no logout.
+     */
+    @PostMapping("/remove-by-user/{userId}")
+    public ResponseEntity<?> removeUserSongOnLogout(@PathVariable String userId) {
+        musicQueueService.removeSongByUserId(userId);
+        return ResponseEntity.ok().body(Map.of("message", "Comando de remoção de música enviado."));
     }
 
-    System.out.println("ADMIN: Tentativa de pular, mas a fila está vazia.");
-    return false;
-  }
 
-  public List<MusicaFila> getSnapshotDaFila() {
-    return songQueue
-        .stream()
-        .filter(m -> !m.isJaTocou())
-        .limit(6)
-        .collect(Collectors.toList());
-  }
-
-  public void adicionarMusicaComoAdmin(MusicaFila musica) {
-        songQueue.add(musica);
-        System.out.println("ADMIN: Adicionou à fila (override): " + musica.getTitulo());
+    /**
+     * GET /api/queue/position/{telefone}: Retorna a posição do utilizador.
+     */
+    @GetMapping("/position/{telefone}")
+    public ResponseEntity<?> getPosition(@PathVariable String telefone) {
+        int position = musicQueueService.getPosicaoPorTelefone(telefone);
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("position", position);
+        
+        return ResponseEntity.ok(response);
     }
 }

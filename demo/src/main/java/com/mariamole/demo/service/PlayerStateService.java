@@ -1,57 +1,71 @@
+
+
 package com.mariamole.demo.service;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Service; // Necessário para AtomicLong
 
 @Service
 public class PlayerStateService {
 
-  private final AtomicBoolean isPaused = new AtomicBoolean(false);
+    // Usamos AtomicBoolean/AtomicLong para garantir a segurança em ambientes multi-thread (como o Spring)
+    private final AtomicBoolean isPaused = new AtomicBoolean(true);
+    private final AtomicLong lastRestartRequestTime = new AtomicLong(0L); 
+    private final AtomicLong lastSkipRequestTime = new AtomicLong(0L);
+    private final AtomicBoolean isQueueLocked = new AtomicBoolean(false); 
 
-  private final AtomicLong lastRestartRequestTime = new AtomicLong(0L);
-  private final AtomicLong lastSkipRequestTime = new AtomicLong(0L);
-
-  private final AtomicBoolean queueLocked = new AtomicBoolean(false);
-
-  public void pause() {
-    this.isPaused.set(true);
-  }
-
-  public void play() {
-    this.isPaused.set(false);
-  }
-
-  public boolean isPaused() {
-    return this.isPaused.get();
-  }
-
-  public void restart() {
-    this.lastRestartRequestTime.set(System.currentTimeMillis());
-  }
-
-  public long getLastRestartRequestTime() {
-    return this.lastRestartRequestTime.get();
-  }
-  public void skip() {
-        this.lastSkipRequestTime.set(System.currentTimeMillis());
-        this.isPaused.set(false);
+    // --- MÉTODOS DE GETTER (Corrigido) ---
+    
+    /**
+     * Retorna o timestamp da última requisição de "Recomeçar".
+     */
+    public long getLastRestartRequestTime() { 
+        return this.lastRestartRequestTime.get(); // Retorna o valor da variável AtomicLong
     }
-
-    public long getLastSkipRequestTime() {
+    
+    public long getLastSkipRequestTime() { 
         return this.lastSkipRequestTime.get();
     }
+    
+    // --- MÉTODOS DE ESTADO (Comandos) ---
 
-    public void lockQueue() {
-        this.queueLocked.set(true);
+    public boolean isPaused() { return isPaused.get(); }
+    public void pause() { this.isPaused.set(true); }
+    public void play() { this.isPaused.set(false); }
+    
+    public boolean isQueueLocked() { return isQueueLocked.get(); }
+    public void lockQueue() { this.isQueueLocked.set(true); }
+    public void unlockQueue() { this.isQueueLocked.set(false); }
+
+    public void restart() {
+        this.lastRestartRequestTime.set(System.currentTimeMillis()); 
+        this.isPaused.set(true); // Força a pausa após o restart
     }
 
-    public void unlockQueue() {
-        this.queueLocked.set(false);
+    public void skip() {
+        this.lastSkipRequestTime.set(System.currentTimeMillis());
+        this.isPaused.set(true); // Força a pausa após o skip
     }
 
-    public boolean isQueueLocked() {
-        return this.queueLocked.get();
+    // Método para o Frontend obter o status
+    public PlayerStatus getStatus() {
+        return new PlayerStatus(isPaused.get(), lastRestartRequestTime.get(), lastSkipRequestTime.get(), isQueueLocked.get());
+    }
+
+    // DTO simples para a resposta do status
+    public static class PlayerStatus {
+        public boolean isPaused;
+        public long lastRestartRequestTime;
+        public long lastSkipRequestTime;
+        public boolean isQueueLocked;
+
+        public PlayerStatus(boolean isPaused, long lastRestartRequestTime, long lastSkipRequestTime, boolean isQueueLocked) {
+            this.isPaused = isPaused;
+            this.lastRestartRequestTime = lastRestartRequestTime;
+            this.lastSkipRequestTime = lastSkipRequestTime;
+            this.isQueueLocked = isQueueLocked;
+        }
     }
 }

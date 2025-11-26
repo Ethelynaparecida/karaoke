@@ -18,6 +18,7 @@ import com.mariamole.demo.model.MusicaFila;
 import com.mariamole.demo.model.Usuario;
 import com.mariamole.demo.repository.HistoricoMusicaRepository;
 import com.mariamole.demo.repository.UsuarioRepository;
+import com.mariamole.demo.service.MusicQueueService;
 import com.mariamole.demo.service.PlayerStateService;
 import com.mariamole.demo.service.YouTubeService;
 
@@ -31,17 +32,20 @@ public class AdminController {
     private final MusicQueueController musicQueueController;
     private final UsuarioRepository usuarioRepository;
     private final YouTubeService youTubeService;
+    private final MusicQueueService musicQueueService;
 
     @Autowired
     public AdminController(HistoricoMusicaRepository historicoRepository, 
                            PlayerStateService playerStateService,
                            MusicQueueController musicQueueController,
                            UsuarioRepository usuarioRepository,
+                           MusicQueueService musicQueueService,
                            YouTubeService youTubeService) {
         this.historicoRepository = historicoRepository;
         this.playerStateService = playerStateService;
         this.musicQueueController = musicQueueController;
         this.usuarioRepository = usuarioRepository;
+        this.musicQueueService = musicQueueService;
         this.youTubeService = youTubeService;
     }
 
@@ -74,9 +78,10 @@ public class AdminController {
 
     @PostMapping("/player/skip")
     public ResponseEntity<?> skipSong() {
-        boolean skipped = musicQueueController.pularMusicaAtual();
+        boolean skipped = musicQueueService.pularMusicaAtual();
 
         if (skipped) {
+            playerStateService.pause();
             playerStateService.skip();
             return ResponseEntity.ok().body(Map.of("message", "Música pulada."));
         } else {
@@ -86,7 +91,7 @@ public class AdminController {
 
     @GetMapping("/queue/view")
     public ResponseEntity<List<MusicaFila>> getQueueView() {
-        List<MusicaFila> fila = musicQueueController.getSnapshotDaFila();
+        List<MusicaFila> fila = musicQueueService.getSnapshotDaFila();
         return ResponseEntity.ok(fila);
     }
 
@@ -107,6 +112,7 @@ public class AdminController {
     @PostMapping("/player/restart")
     public ResponseEntity<?> restartSong() {
         playerStateService.restart();
+        playerStateService.pause();
         System.out.println("ADMIN: Comando 'Recomeçar' enviado.");
         return ResponseEntity.ok().body(Map.of("message", "Música reiniciada."));
     }
@@ -139,7 +145,7 @@ public class AdminController {
             System.err.println("Falha ao salvar no histórico (Admin Add): " + e.getMessage());
         }
 
-        musicQueueController.adicionarMusicaComoAdmin(novaMusica);
+        musicQueueService.adicionarMusicaComoAdmin(novaMusica);
         return ResponseEntity.ok(Map.of("message", "Música adicionada pelo admin."));
     }
 

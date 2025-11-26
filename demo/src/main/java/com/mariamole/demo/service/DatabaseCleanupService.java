@@ -1,12 +1,12 @@
 package com.mariamole.demo.service;
 
+import java.time.LocalDateTime;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.mariamole.demo.repository.HistoricoMusicaRepository;
-
-import java.time.LocalDateTime;
 
 @Service
 public class DatabaseCleanupService {
@@ -17,7 +17,7 @@ public class DatabaseCleanupService {
   
     @Scheduled(cron = "0 0 5 * * ?")
     public void deleteOldMusicHistory() {
-        LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(10);
         
         System.out.println("SCHEDULER: A apagar histórico de músicas anterior a " + cutoff);
         
