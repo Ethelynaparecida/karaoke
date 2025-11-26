@@ -10,17 +10,12 @@ import org.springframework.stereotype.Service; // Necessário para AtomicLong
 @Service
 public class PlayerStateService {
 
-    // Usamos AtomicBoolean/AtomicLong para garantir a segurança em ambientes multi-thread (como o Spring)
     private final AtomicBoolean isPaused = new AtomicBoolean(true);
     private final AtomicLong lastRestartRequestTime = new AtomicLong(0L); 
     private final AtomicLong lastSkipRequestTime = new AtomicLong(0L);
     private final AtomicBoolean isQueueLocked = new AtomicBoolean(false); 
 
-    // --- MÉTODOS DE GETTER (Corrigido) ---
-    
-    /**
-     * Retorna o timestamp da última requisição de "Recomeçar".
-     */
+  
     public long getLastRestartRequestTime() { 
         return this.lastRestartRequestTime.get(); // Retorna o valor da variável AtomicLong
     }
@@ -29,7 +24,7 @@ public class PlayerStateService {
         return this.lastSkipRequestTime.get();
     }
     
-    // --- MÉTODOS DE ESTADO (Comandos) ---
+   
 
     public boolean isPaused() { return isPaused.get(); }
     public void pause() { this.isPaused.set(true); }

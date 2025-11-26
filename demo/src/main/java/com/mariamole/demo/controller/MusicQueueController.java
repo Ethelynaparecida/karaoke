@@ -34,13 +34,10 @@ public class MusicQueueController {
         this.playerStateService = playerStateService;
     }
 
-    /**
-     * POST /api/queue/add: Adiciona música à fila (Ação do Utilizador).
-     */
+    
     @PostMapping("/add")
     public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload) {
         
-        // 1. Verificação de Bloqueio (Única lógica de negócio no Controller)
         if (playerStateService.isQueueLocked()) {
             return ResponseEntity.status(HttpStatus.LOCKED).body("A fila está temporariamente fechada pelo admin.");
         }
@@ -54,10 +51,8 @@ public class MusicQueueController {
             return ResponseEntity.badRequest().body("Dados incompletos.");
         }
         
-        // 2. Chama a Lógica de Serviço
         int position = musicQueueService.addSong(telefone, videoId, titulo, nome);
         
-        // 3. Trata a Resposta do Serviço
         if (position == -2) { // -2 significa que o utilizador já tem música
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Utilizador já tem uma música na fila.");
         }
@@ -69,9 +64,7 @@ public class MusicQueueController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * GET /api/queue/next: Obtém a próxima música para o Player (TV).
-     */
+ 
     @GetMapping("/next")
     public ResponseEntity<?> getNextSong() {
         Optional<MusicaFila> nextSongOpt = musicQueueService.getNextSong();
@@ -82,9 +75,7 @@ public class MusicQueueController {
         return ResponseEntity.ok().build(); // Fila vazia
     }
 
-    /**
-     * POST /api/queue/complete: Marca a música como tocada (Ação do Player).
-     */
+  
     @PostMapping("/complete")
     public ResponseEntity<?> completeSong(@RequestBody Map<String, String> payload) {
         String videoId = payload.get("videoId");
@@ -95,10 +86,7 @@ public class MusicQueueController {
         musicQueueService.completeSong(videoId);
         return ResponseEntity.ok().build();
     }
-    
-    /**
-     * POST /api/queue/remove-by-user/{userId} - Remove música no logout.
-     */
+  
     @PostMapping("/remove-by-user/{userId}")
     public ResponseEntity<?> removeUserSongOnLogout(@PathVariable String userId) {
         musicQueueService.removeSongByUserId(userId);
@@ -106,9 +94,6 @@ public class MusicQueueController {
     }
 
 
-    /**
-     * GET /api/queue/position/{telefone}: Retorna a posição do utilizador.
-     */
     @GetMapping("/position/{telefone}")
     public ResponseEntity<?> getPosition(@PathVariable String telefone) {
         int position = musicQueueService.getPosicaoPorTelefone(telefone);

@@ -1,6 +1,7 @@
 package com.mariamole.demo;
 
 import java.util.Arrays;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -39,10 +40,9 @@ public class SecurityConfig {
         // 4. Permita o seu frontend (local e no Render)
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:4200", 
-            "https://mariamolefe.onrender.com" // A sua URL de produção
+            "https://mariamolefe.onrender.com" 
         ));
         
-        // 5. Permita os métodos que usamos
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         
         configuration.setAllowedHeaders(Arrays.asList("*"));
