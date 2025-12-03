@@ -1,6 +1,7 @@
 package com.mariamole.demo.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -102,5 +103,11 @@ public class MusicQueueController {
         response.put("position", position);
         
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<MusicaFila>> getAllSongs() {
+        List<MusicaFila> allSongs = musicQueueService.getAllSongsInQueue();
+        return ResponseEntity.ok(allSongs);
     }
 }

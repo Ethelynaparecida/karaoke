@@ -162,4 +162,10 @@ public class MusicQueueService {
             System.err.println("Falha ao atualizar horário de exibição: " + e.getMessage());
         }
     }
+
+    public List<MusicaFila> getAllSongsInQueue() {
+        return songQueue;
+    }
+
+    
 }

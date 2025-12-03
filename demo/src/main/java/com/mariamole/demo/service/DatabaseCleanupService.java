@@ -15,7 +15,7 @@ public class DatabaseCleanupService {
     private HistoricoMusicaRepository historicoRepository;
 
   
-    @Scheduled(cron = "0 0 5 * * ?")
+    @Scheduled(cron = "0 0 10 * * ?")
     public void deleteOldMusicHistory() {
         LocalDateTime cutoff = LocalDateTime.now().minusDays(10);
         
