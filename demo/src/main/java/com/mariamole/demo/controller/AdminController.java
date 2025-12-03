@@ -162,4 +162,10 @@ public class AdminController {
         System.out.println("ADMIN: Fila de músicas DESBLOQUEADA");
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/log/all")
+    public ResponseEntity<List<HistoricoMusica>> getAllTimeLog() {
+        List<HistoricoMusica> log = historicoRepository.findAllByOrderByHorarioCadastroDesc();
+        return ResponseEntity.ok(log);
+    }
 }
