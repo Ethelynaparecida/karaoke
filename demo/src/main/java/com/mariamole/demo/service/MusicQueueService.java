@@ -1,7 +1,9 @@
 package com.mariamole.demo.service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -20,6 +22,10 @@ public class MusicQueueService {
     private final List<MusicaFila> songQueue = new CopyOnWriteArrayList<>();
     private final HistoricoMusicaRepository historicoRepository;
     private final PlayerStateService playerStateService; 
+    private String errorVideoId = null;
+    private String errorVideoUrl = null;
+    private String errorMessage = null;
+    private String errorUserName = null;
 
     @Autowired
     public MusicQueueService(HistoricoMusicaRepository historicoRepository, 
@@ -167,5 +173,34 @@ public class MusicQueueService {
         return songQueue;
     }
 
+    public void reportVideoError(String videoId, String url, String message, String userName) {
+        this.errorVideoId = videoId;
+        this.errorVideoUrl = url;
+        this.errorMessage = message;
+        this.errorUserName = userName;
+        System.out.println("ERRO REPORTADO PELO PLAYER: " + message + " (User: " + userName + ")");
+    }
+
     
+    public Map<String, String> getErrorStatus() {
+        Map<String, String> status = new HashMap<>();
+        status.put("errorVideoId", this.errorVideoId);
+        status.put("errorVideoUrl", this.errorVideoUrl);
+        status.put("errorMessage", this.errorMessage);
+        status.put("errorUserName", this.errorUserName);
+        return status;
+    }
+
+    
+    public boolean resolveErrorAndSkip() {
+        boolean skipped = pularMusicaAtual(); 
+        
+       
+        this.errorVideoId = null;
+        this.errorVideoUrl = null;
+        this.errorMessage = null;
+        this.errorUserName = null;
+        
+        return skipped;
+    }
 }

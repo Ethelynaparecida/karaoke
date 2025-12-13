@@ -15,6 +15,8 @@ public class PlayerStateService {
     private final AtomicLong lastSkipRequestTime = new AtomicLong(0L);
     private final AtomicBoolean isQueueLocked = new AtomicBoolean(false); 
 
+    
+
   
     public long getLastRestartRequestTime() { 
         return this.lastRestartRequestTime.get(); // Retorna o valor da variável AtomicLong
@@ -55,6 +57,10 @@ public class PlayerStateService {
         public long lastRestartRequestTime;
         public long lastSkipRequestTime;
         public boolean isQueueLocked;
+        public String errorVideoId;
+        public String errorVideoUrl;
+        public String errorMessage;
+        public String errorUserName;
 
         public PlayerStatus(boolean isPaused, long lastRestartRequestTime, long lastSkipRequestTime, boolean isQueueLocked) {
             this.isPaused = isPaused;

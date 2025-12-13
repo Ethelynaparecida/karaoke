@@ -110,4 +110,36 @@ public class MusicQueueController {
         List<MusicaFila> allSongs = musicQueueService.getAllSongsInQueue();
         return ResponseEntity.ok(allSongs);
     }
+
+    @PostMapping("/error/notify")
+    public ResponseEntity<?> notifyVideoError(@RequestBody Map<String, String> payload) {
+        String videoId = payload.get("videoId");
+        String url = payload.get("url");
+        String message = payload.get("message");
+        String userName = payload.get("userName");
+         System.out.println("userName ** " +userName);
+        
+        
+        // Chama o serviço para guardar o erro
+       musicQueueService.reportVideoError(videoId, url, message, userName);
+        
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/error/status")
+    public ResponseEntity<Map<String, String>> getErrorStatus() {
+        return ResponseEntity.ok(musicQueueService.getErrorStatus());
+    }
+
+    @PostMapping("/error/clear")
+    public ResponseEntity<?> clearVideoError() {
+        // Chama o serviço para pular e limpar
+        boolean resolved = musicQueueService.resolveErrorAndSkip();
+        
+        if (resolved) {
+            return ResponseEntity.ok().body(Map.of("message", "Erro limpo e música pulada."));
+        } else {
+            return ResponseEntity.ok().body(Map.of("message", "Erro limpo, mas não havia música para pular."));
+        }
+    }
 }

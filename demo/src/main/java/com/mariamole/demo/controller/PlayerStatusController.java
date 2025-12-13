@@ -1,6 +1,5 @@
 package com.mariamole.demo.controller;
 
-import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +9,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.mariamole.demo.service.PlayerStateService; 
+import com.mariamole.demo.service.MusicQueueService; 
+import com.mariamole.demo.service.PlayerStateService;
 
 @RestController
 @RequestMapping("/api/player")
@@ -18,23 +18,27 @@ import com.mariamole.demo.service.PlayerStateService;
 public class PlayerStatusController {
 
     private final PlayerStateService playerStateService;
+    private MusicQueueService musicQueueService;
 
 
     @Autowired
-    public PlayerStatusController(PlayerStateService playerStateService) {
+    public PlayerStatusController(PlayerStateService playerStateService, MusicQueueService musicQueueService) {
         this.playerStateService = playerStateService;
+        this.musicQueueService = musicQueueService;
     }
+    
 
-    @GetMapping("/status")
-    public ResponseEntity<?> getStatus() {
-        
-        Map<String, Object> status = new HashMap<>();
-        status.put("isPaused", playerStateService.isPaused());
-        status.put("lastRestartRequestTime", playerStateService.getLastRestartRequestTime());
-        status.put("lastSkipRequestTime", playerStateService.getLastSkipRequestTime());
+   @GetMapping("/status")
+    public ResponseEntity<PlayerStateService.PlayerStatus> getStatus() {
 
-        status.put("isQueueLocked", playerStateService.isQueueLocked());
-        
+        PlayerStateService.PlayerStatus status = playerStateService.getStatus();
+        Map<String, String> errorData = musicQueueService.getErrorStatus();
+
+        status.errorVideoId = errorData.get("errorVideoId");
+        status.errorVideoUrl = errorData.get("errorVideoUrl");
+        status.errorMessage = errorData.get("errorMessage");
+        status.errorUserName = errorData.get("errorUserName");
+
         return ResponseEntity.ok(status);
     }
 }
