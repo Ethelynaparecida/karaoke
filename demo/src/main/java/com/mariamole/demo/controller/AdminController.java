@@ -94,6 +94,11 @@ public class AdminController {
         List<MusicaFila> fila = musicQueueService.getSnapshotDaFila();
         return ResponseEntity.ok(fila);
     }
+    @GetMapping("/queue/count")
+    public ResponseEntity<Integer> getQueueSize() { 
+        int queueSize = musicQueueService.getQueueSize();
+        return ResponseEntity.ok(queueSize);
+    }
 
     @PostMapping("/player/pause")
     public ResponseEntity<?> pausePlayer() {

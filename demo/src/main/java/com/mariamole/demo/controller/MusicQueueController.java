@@ -111,6 +111,12 @@ public class MusicQueueController {
         return ResponseEntity.ok(allSongs);
     }
 
+    @GetMapping("/count")
+    public ResponseEntity<Integer> getQueueSize() { 
+        int queueSize = musicQueueService.getQueueSize();
+        return ResponseEntity.ok(queueSize);
+    }
+
     @PostMapping("/error/notify")
     public ResponseEntity<?> notifyVideoError(@RequestBody Map<String, String> payload) {
         String videoId = payload.get("videoId");

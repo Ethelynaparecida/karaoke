@@ -172,6 +172,10 @@ public class MusicQueueService {
     public List<MusicaFila> getAllSongsInQueue() {
         return songQueue;
     }
+    
+    public int getQueueSize() {
+    return songQueue.size();
+}
 
     public void reportVideoError(String videoId, String url, String message, String userName) {
         this.errorVideoId = videoId;
