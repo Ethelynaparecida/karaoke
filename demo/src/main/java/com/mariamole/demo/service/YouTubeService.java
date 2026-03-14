@@ -1,20 +1,22 @@
 package com.mariamole.demo.service;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException; 
+import java.io.IOException; 
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.SearchListResponse;
 import com.google.api.services.youtube.model.VideoListResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List; 
-import java.util.concurrent.atomic.AtomicInteger; 
-import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class YouTubeService {
@@ -52,7 +54,7 @@ public class YouTubeService {
             searchRequest.setKey(activeKey); 
             searchRequest.setQ(query);
             searchRequest.setType(Collections.singletonList("video"));
-            searchRequest.setMaxResults(15L);
+            searchRequest.setMaxResults(30L);
             searchRequest.setVideoEmbeddable("true");
 
             SearchListResponse response = searchRequest.execute();
