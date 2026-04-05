@@ -2,24 +2,27 @@ package com.mariamole.demo.controller;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import com.mariamole.demo.model.Usuario;
 import com.mariamole.demo.repository.UsuarioRepository;
@@ -37,8 +40,8 @@ public class AuthController {
     private final UsuarioRepository usuarioRepository;
     private final MusicQueueService musicQueueService;
     
-    @Autowired
-    private JavaMailSender mailSender; 
+    @Value("${resend.api.key}")
+    private String resendApiKey;
 
     private final Map<String, String> tokensTemporarios = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> dadosPendentes = new ConcurrentHashMap<>();
@@ -52,125 +55,96 @@ public class AuthController {
 
     private String obterIpDoCliente(HttpServletRequest request) {
         String ip = request.getHeader("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = request.getRemoteAddr();
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) ip = request.getRemoteAddr();
+        if (ip != null && ip.contains(",")) ip = ip.split(",")[0].trim();
         return ip;
     }
 
     private String limparTexto(String texto) {
         if (texto == null) return "";
-        String semEspaco = texto.replaceAll("\\s+", "").toLowerCase();
-        String semAcento = Normalizer.normalize(semEspaco, Normalizer.Form.NFD);
+        String semAcento = Normalizer.normalize(texto.replaceAll("\\s+", "").toLowerCase(), Normalizer.Form.NFD);
         return semAcento.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
     private boolean nomesSaoParecidos(String nome1, String nome2) {
         String n1 = limparTexto(nome1);
         String n2 = limparTexto(nome2);
-
-        if (n1.isEmpty() && n2.isEmpty()) return true;
-        if (n1.isEmpty() || n2.isEmpty()) return false;
-
+        if (n1.isEmpty() || n2.isEmpty()) return n1.equals(n2);
+        
         int[][] dp = new int[n1.length() + 1][n2.length() + 1];
         for (int i = 0; i <= n1.length(); i++) dp[i][0] = i;
         for (int j = 0; j <= n2.length(); j++) dp[0][j] = j;
-
         for (int i = 1; i <= n1.length(); i++) {
             for (int j = 1; j <= n2.length(); j++) {
                 int custo = (n1.charAt(i - 1) == n2.charAt(j - 1)) ? 0 : 1;
                 dp[i][j] = Math.min(Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), dp[i - 1][j - 1] + custo);
             }
         }
-
-        int maxLen = Math.max(n1.length(), n2.length());
-        double similaridade = 1.0 - ((double) dp[n1.length()][n2.length()] / maxLen);
-
-        return similaridade >= 0.80;
+        return (1.0 - ((double) dp[n1.length()][n2.length()] / Math.max(n1.length(), n2.length()))) >= 0.80;
     }
+
 
     @PostMapping("/login/solicitar-token")
     public ResponseEntity<?> solicitarToken(@RequestBody Map<String, Object> payload, HttpServletRequest request) {
         String nome = (String) payload.get("nome");
         String email = (String) payload.get("email");
         String telefone = (String) payload.get("telefone");
-        boolean forcarSubstituicao = payload.containsKey("forcar") && (Boolean) payload.get("forcar");
+        boolean forcar = payload.containsKey("forcar") && (Boolean) payload.get("forcar");
         String ipCliente = obterIpDoCliente(request);
 
-        logger.info("[LOGIN - SOLICITACAO] Iniciando tentativa. Email: [{}]", email);
+        logger.info("[LOGIN - SOLICITACAO] Email: [{}]", email);
 
         if (nome == null || email == null || telefone == null) {
-            return ResponseEntity.badRequest().body(Map.of("erro", "É necessário preencher Nome, E-mail e Telefone."));
+            return ResponseEntity.badRequest().body(Map.of("erro", "Preencha todos os campos."));
         }
 
-        LocalDateTime tempoUltimoToken = temposTokens.get(email);
-        if (tempoUltimoToken != null && tempoUltimoToken.plusMinutes(5).isAfter(LocalDateTime.now())) {
-            logger.info("[LOGIN - ANTI-SPAM] Token ainda valido para [{}]. Nao enviaremos novo email.", email);
-            
-            Map<String, Object> infoUsuario = Map.of("nome", nome, "telefone", telefone, "ip", ipCliente);
-            dadosPendentes.put(email, infoUsuario);
-
-            return ResponseEntity.ok().body(Map.of(
-                "reutilizado", true,
-                "mensagem", "Um código ainda válido já foi enviado aos seus e-mails há pouco tempo. Por favor, verifique a caixa de entrada e spam."
-            ));
+        LocalDateTime ultimo = temposTokens.get(email);
+        if (ultimo != null && ultimo.plusMinutes(5).isAfter(LocalDateTime.now())) {
+            return ResponseEntity.ok().body(Map.of("reutilizado", true, "mensagem", "Código ainda válido. Verifique o seu e-mail."));
         }
 
-        List<Usuario> usuariosNesseIp = usuarioRepository.findByUltimoIp(ipCliente);
-        for (Usuario u : usuariosNesseIp) {
+        List<Usuario> usuariosIp = usuarioRepository.findByUltimoIp(ipCliente);
+        for (Usuario u : usuariosIp) {
             if (nomesSaoParecidos(nome, u.getNome())) {
-                telefone = u.getTelefone(); 
-                break; 
+                telefone = u.getTelefone();
+                break;
             }
         }
 
-        int posicaoNaFila = musicQueueService.getPosicaoPorTelefone(telefone); 
-
-        if (posicaoNaFila > 0 && !forcarSubstituicao) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of(
-                        "requerConfirmacao", true, 
-                        "erro", "Este utilizador já tem uma música na fila em outro aparelho. Deseja cancelar o pedido anterior e aceder por aqui?"
-                    ));
+        if (musicQueueService.getPosicaoPorTelefone(telefone) > 0 && !forcar) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("requerConfirmacao", true, "erro", "Já tens uma música na fila!"));
         }
-
-        if (posicaoNaFila > 0 && forcarSubstituicao) {
-            musicQueueService.removeSongByUserId(telefone); 
-        }
+        if (forcar) musicQueueService.removeSongByUserId(telefone);
 
         String token = String.format("%04d", new Random().nextInt(10000));
-        
         tokensTemporarios.put(email, token);
-        temposTokens.put(email, LocalDateTime.now()); 
-        
-        Map<String, Object> infoUsuario = Map.of(
-            "nome", nome, "telefone", telefone, "ip", ipCliente
-        );
-        dadosPendentes.put(email, infoUsuario);
+        temposTokens.put(email, LocalDateTime.now());
+        dadosPendentes.put(email, Map.of("nome", nome, "telefone", telefone, "ip", ipCliente));
 
         try {
-            SimpleMailMessage mensagem = new SimpleMailMessage();
-            mensagem.setTo(email);
-            mensagem.setSubject("Código de Acesso - Karaokê");
-            mensagem.setText("Olá " + nome + "!\nSeu código de acesso para pedir músicas é: " + token + "\n\n(Este código é válido por 5 minutos).");
-            mailSender.send(mensagem);
-            
-            logger.info("[LOGIN - EMAIL ENVIADO] Token [{}] enviado com sucesso para Email: [{}]", token, email);
-        }catch (Exception e) {
-            logger.error("[LOGIN - ERRO EMAIL] Falha ao disparar email para [{}]. Motivo: {}", email, e.getMessage());
-            
+            RestTemplate restTemplate = new RestTemplate();
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(resendApiKey);
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("from", "Karaoke <onboarding@resend.dev>");
+            body.put("to", List.of(email));
+            body.put("subject", "Seu Código de Acesso");
+            body.put("html", "<strong>Olá " + nome + "!</strong><br>Seu código é: <h1 style='color:blue'>" + token + "</h1>");
+
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
+            restTemplate.postForEntity("https://api.resend.com/emails", entity, String.class);
+
+            logger.info("[LOGIN - RESEND] Email enviado com sucesso para [{}]", email);
+            return ResponseEntity.ok().body(Map.of("mensagem", "Código enviado com sucesso!"));
+
+        } catch (Exception e) {
+            logger.error("[LOGIN - ERRO RESEND] Motivo: {}", e.getMessage());
             tokensTemporarios.remove(email);
             temposTokens.remove(email);
-            dadosPendentes.remove(email);
-
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("erro", "Não foi possível enviar o código para este e-mail. Verifique se está correto."));
+            return ResponseEntity.status(500).body(Map.of("erro", "Falha ao enviar e-mail."));
         }
-
-        return ResponseEntity.ok().body(Map.of("mensagem", "Código enviado com sucesso para o seu e-mail!"));
     }
 
     @PostMapping("/login/validar-token")
@@ -178,58 +152,36 @@ public class AuthController {
         String email = payload.get("email");
         String tokenDigitado = payload.get("token");
 
-        if (email == null || tokenDigitado == null) {
-            return ResponseEntity.badRequest().body(Map.of("erro", "O E-mail e o Código são obrigatórios."));
+        LocalDateTime gerado = temposTokens.get(email);
+        if (gerado == null || gerado.plusMinutes(5).isBefore(LocalDateTime.now())) {
+            limparSessao(email);
+            return ResponseEntity.status(401).body(Map.of("erro", "Código expirado."));
         }
 
-        LocalDateTime tempoGerado = temposTokens.get(email);
-        if (tempoGerado == null || tempoGerado.plusMinutes(5).isBefore(LocalDateTime.now())) {
-            tokensTemporarios.remove(email);
-            temposTokens.remove(email);
-            dadosPendentes.remove(email);
-            
-            logger.warn("[VALIDACAO - EXPIRADO] Token expirado para Email: [{}]", email);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("erro", "O código expirou após 5 minutos. Por favor, volte e solicite um novo."));
-        }
-
-        String tokenCorreto = tokensTemporarios.get(email);
-        
-        if (tokenCorreto == null || !tokenCorreto.equals(tokenDigitado)) {
-            logger.warn("[VALIDACAO - FALHA] Token incorreto para Email: [{}]", email);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("erro", "O código digitado está incorreto. Tente novamente."));
+        if (!tokenDigitado.equals(tokensTemporarios.get(email))) {
+            return ResponseEntity.status(401).body(Map.of("erro", "Código incorreto."));
         }
 
         Map<String, Object> dados = dadosPendentes.get(email);
-        String telefone = (String) dados.get("telefone"); 
-        String nome = (String) dados.get("nome");
-        String ip = (String) dados.get("ip");
+        salvarUsuarioNoBanco(email, (String)dados.get("nome"), (String)dados.get("telefone"), (String)dados.get("ip"));
+        limparSessao(email);
 
-        Optional<Usuario> optUsuario = usuarioRepository.findByTelefone(telefone);
+        return ResponseEntity.ok().body(Map.of("mensagem", "Login efetuado!"));
+    }
 
-        if (optUsuario.isPresent()) {
-            Usuario usuarioExistente = optUsuario.get();
-            usuarioExistente.setNome(nome);
-            usuarioExistente.setEmail(email); 
-            usuarioExistente.setUltimoIp(ip); 
-            usuarioExistente.setUltimoLogin(LocalDateTime.now());
-            usuarioRepository.save(usuarioExistente);
-        } else {
-            Usuario novoUsuario = new Usuario(); 
-            novoUsuario.setNome(nome);
-            novoUsuario.setEmail(email);
-            novoUsuario.setTelefone(telefone);
-            novoUsuario.setUltimoIp(ip); 
-            novoUsuario.setUltimoLogin(LocalDateTime.now());
-            usuarioRepository.save(novoUsuario);
-        }
-
+    private void limparSessao(String email) {
         tokensTemporarios.remove(email);
         temposTokens.remove(email);
         dadosPendentes.remove(email);
+    }
 
-        logger.info("[VALIDACAO - SUCESSO] Login concluido para o Email: [{}]", email);
-        return ResponseEntity.ok().body(Map.of("mensagem", "Login efetuado com sucesso!"));
+    private void salvarUsuarioNoBanco(String email, String nome, String telefone, String ip) {
+        Usuario user = usuarioRepository.findByTelefone(telefone).orElse(new Usuario());
+        user.setNome(nome);
+        user.setEmail(email);
+        user.setTelefone(telefone);
+        user.setUltimoIp(ip);
+        user.setUltimoLogin(LocalDateTime.now());
+        usuarioRepository.save(user);
     }
 }
