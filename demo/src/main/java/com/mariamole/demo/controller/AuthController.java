@@ -42,7 +42,6 @@ public class AuthController {
 
     private final Map<String, String> tokensTemporarios = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> dadosPendentes = new ConcurrentHashMap<>();
-    
     private final Map<String, LocalDateTime> temposTokens = new ConcurrentHashMap<>();
 
     @Autowired
@@ -161,7 +160,12 @@ public class AuthController {
             
             logger.info("[LOGIN - EMAIL ENVIADO] Token [{}] enviado com sucesso para Email: [{}]", token, email);
         } catch (Exception e) {
-            logger.error("[LOGIN - ERRO EMAIL] Falha ao disparar email para [{}].", email);
+            logger.error("[LOGIN - ERRO EMAIL] Falha ao disparar email para [{}]. Removendo trava de anti-spam.", email);
+            
+            tokensTemporarios.remove(email);
+            temposTokens.remove(email);
+            dadosPendentes.remove(email);
+
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("erro", "Não foi possível enviar o código para este e-mail. Verifique se está correto."));
         }
