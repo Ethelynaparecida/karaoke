@@ -159,8 +159,8 @@ public class AuthController {
             mailSender.send(mensagem);
             
             logger.info("[LOGIN - EMAIL ENVIADO] Token [{}] enviado com sucesso para Email: [{}]", token, email);
-        } catch (Exception e) {
-            logger.error("[LOGIN - ERRO EMAIL] Falha ao disparar email para [{}]. Removendo trava de anti-spam.", email);
+        }catch (Exception e) {
+            logger.error("[LOGIN - ERRO EMAIL] Falha ao disparar email para [{}]. Motivo: {}", email, e.getMessage());
             
             tokensTemporarios.remove(email);
             temposTokens.remove(email);
