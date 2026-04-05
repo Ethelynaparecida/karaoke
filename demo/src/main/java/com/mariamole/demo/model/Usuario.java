@@ -1,7 +1,13 @@
 package com.mariamole.demo.model;
 
-import jakarta.persistence.*; 
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "usuarios")
@@ -22,6 +28,10 @@ public class Usuario {
 
     private LocalDateTime dataCadastro;
     private LocalDateTime ultimoLogin;
+
+    private String ultimoIp;
+
+   
 
     public Usuario() {}
 
@@ -45,5 +55,7 @@ public class Usuario {
     public LocalDateTime getDataCadastro() { return dataCadastro; }
     public void setDataCadastro(LocalDateTime dataCadastro) { this.dataCadastro = dataCadastro; }
     public LocalDateTime getUltimoLogin() { return ultimoLogin; }
-    public void setUltimoLogin(LocalDateTime ultimoLogin) { this.ultimoLogin = ultimoLogin; }
+    public void setUltimoLogin(LocalDateTime ultimoLogin) { this.ultimoLogin = ultimoLogin; } 
+    public String getUltimoIp() { return ultimoIp; }
+    public void setUltimoIp(String ultimoIp) { this.ultimoIp = ultimoIp; }
 }

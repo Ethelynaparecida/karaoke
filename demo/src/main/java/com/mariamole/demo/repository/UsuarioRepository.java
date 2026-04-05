@@ -1,15 +1,18 @@
 package com.mariamole.demo.repository;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.mariamole.demo.model.Usuario;
 
-import java.util.Optional;
-
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByTelefone(String telefone);
+
+    List<Usuario> findByUltimoIp(String ultimoIp);
     
 }
