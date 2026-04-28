@@ -118,6 +118,10 @@ public class MusicQueueService {
             musicaParaPular.setJaTocou(true);
             songQueue.remove(musicaParaPular);
             atualizarHorarioExibicao(musicaParaPular);
+            this.errorVideoId = null;
+            this.errorVideoUrl = null;
+            this.errorMessage = null;
+            this.errorUserName = null;
             playerStateService.skip(); // Envia o comando de skip para o player
             return true;
         }
