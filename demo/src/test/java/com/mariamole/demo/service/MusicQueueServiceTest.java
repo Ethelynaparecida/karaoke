@@ -60,7 +60,7 @@ class MusicQueueServiceTest {
     void deveSugerirMusicasPorTextoSemUsarApiDoYoutube() {
         LocalDateTime agora = LocalDateTime.now();
 
-        when(historicoRepository.findAllByOrderByHorarioCadastroDesc())
+        when(historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(any(), any()))
             .thenReturn(List.of(
                 new HistoricoMusica("Ana", "111", "v1", "Someone Like You", agora.minusDays(1)),
                 new HistoricoMusica("Bia", "222", "v2", "Dream On", agora.minusDays(2)),
@@ -70,6 +70,23 @@ class MusicQueueServiceTest {
         List<Map<String, Object>> resultado = service.sugerirMusicasPorTexto("bel");
 
         assertFalse(resultado.isEmpty());
+        assertEquals("Believer", resultado.get(0).get("titulo"));
+    }
+
+    @Test
+    void deveLimitarSugestoesAoUltimoPeriodoDe60Dias() {
+        LocalDateTime agora = LocalDateTime.now();
+
+        when(historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(any(), any()))
+            .thenReturn(List.of(
+                new HistoricoMusica("Ana", "111", "v1", "Someone Like You", agora.minusDays(10)),
+                new HistoricoMusica("Bia", "222", "v2", "Believer", agora.minusDays(70))
+            ));
+
+        List<Map<String, Object>> resultado = service.sugerirMusicasPorTexto("bel");
+
+        assertFalse(resultado.isEmpty());
+        assertEquals(1, resultado.size());
         assertEquals("Believer", resultado.get(0).get("titulo"));
     }
 }
