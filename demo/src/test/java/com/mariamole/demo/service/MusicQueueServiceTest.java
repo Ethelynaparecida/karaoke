@@ -74,7 +74,7 @@ class MusicQueueServiceTest {
     }
 
     @Test
-    void deveLimitarSugestoesAoUltimoPeriodoDe60Dias() {
+    void deveLimitarSugestoesAoUltimoPeriodoDe40Dias() {
         LocalDateTime agora = LocalDateTime.now();
 
         when(historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(any(), any()))

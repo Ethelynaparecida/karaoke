@@ -327,7 +327,7 @@ public class MusicQueueService {
     }
 
     LocalDateTime agora = LocalDateTime.now();
-    LocalDateTime inicio = agora.minusDays(60);
+    LocalDateTime inicio = agora.minusDays(40);
     List<HistoricoMusica> historico = historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(inicio, agora);
     Map<String, Map<String, Object>> sugestoesUnicas = new LinkedHashMap<>();
 
