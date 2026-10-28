@@ -3,8 +3,11 @@ package com.mariamole.demo.service;
 import com.mariamole.demo.model.HistoricoMusica;
 import com.mariamole.demo.model.MusicaFila;
 import com.mariamole.demo.repository.HistoricoMusicaRepository;
+import java.text.Normalizer;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -286,6 +289,108 @@ public class MusicQueueService {
 
   public List<MusicaFila> getAllSongsInQueue() {
     return songQueue;
+  }
+
+  public List<Map<String, Object>> getTop10MaisPedidasUltimos30Dias() {
+    LocalDateTime agora = LocalDateTime.now();
+    LocalDateTime inicio = agora.minusDays(30);
+
+    List<HistoricoMusica> historico = historicoRepository.findByHorarioCadastroBetweenOrderByHorarioCadastroDesc(inicio, agora);
+
+    Map<String, Long> contagemPorTitulo = historico.stream()
+      .filter(item -> item.getTitulo() != null && !item.getTitulo().isBlank())
+      .collect(Collectors.groupingBy(HistoricoMusica::getTitulo, Collectors.counting()));
+
+    return contagemPorTitulo.entrySet().stream()
+      .map(entry -> {
+        Map<String, Object> item = new LinkedHashMap<>();
+        item.put("titulo", entry.getKey());
+        item.put("totalPedidos", entry.getValue().intValue());
+
+        HistoricoMusica primeiroRegistro = historico.stream()
+          .filter(musica -> musica.getTitulo() != null && musica.getTitulo().equalsIgnoreCase(entry.getKey()))
+          .findFirst()
+          .orElse(null);
+
+        item.put("videoId", primeiroRegistro != null ? primeiroRegistro.getVideoId() : "");
+        return item;
+      })
+      .sorted((a, b) -> Integer.compare((Integer) b.get("totalPedidos"), (Integer) a.get("totalPedidos")))
+      .limit(10)
+      .collect(Collectors.toList());
+  }
+
+  public List<Map<String, Object>> sugerirMusicasPorTexto(String query) {
+    String termoBusca = normalizeText(query);
+    if (termoBusca.isBlank()) {
+      return List.of();
+    }
+
+    List<HistoricoMusica> historico = historicoRepository.findAllByOrderByHorarioCadastroDesc();
+    Map<String, Map<String, Object>> sugestoesUnicas = new LinkedHashMap<>();
+
+    historico.stream()
+      .filter(item -> item.getTitulo() != null && !item.getTitulo().isBlank())
+      .forEach(item -> {
+        String titulo = item.getTitulo();
+        int score = calcularScoreTitulo(titulo, termoBusca);
+        if (score <= 0) {
+          return;
+        }
+
+        String chaveTitulo = normalizeText(titulo);
+        if (!sugestoesUnicas.containsKey(chaveTitulo)) {
+          Map<String, Object> sugestao = new LinkedHashMap<>();
+          sugestao.put("titulo", titulo);
+          sugestao.put("videoId", item.getVideoId());
+          sugestao.put("score", score);
+          sugestoesUnicas.put(chaveTitulo, sugestao);
+        }
+      });
+
+    return sugestoesUnicas.values().stream()
+      .sorted((a, b) -> Integer.compare((Integer) b.get("score"), (Integer) a.get("score")))
+      .limit(10)
+      .collect(Collectors.toList());
+  }
+
+  private int calcularScoreTitulo(String titulo, String termoBusca) {
+    String tituloNormalizado = normalizeText(titulo);
+
+    if (tituloNormalizado.equals(termoBusca)) {
+      return 100;
+    }
+    if (tituloNormalizado.startsWith(termoBusca)) {
+      return 90;
+    }
+    if (tituloNormalizado.contains(termoBusca)) {
+      return 80;
+    }
+
+    String[] tokens = termoBusca.split("\\s+");
+    long tokensEncontrados = Arrays.stream(tokens)
+      .filter(token -> !token.isBlank() && tituloNormalizado.contains(token))
+      .count();
+
+    if (tokensEncontrados > 0) {
+      return (int) (60 + tokensEncontrados * 10);
+    }
+
+    return 0;
+  }
+
+  private String normalizeText(String value) {
+    if (value == null) {
+      return "";
+    }
+
+    String normalized = Normalizer.normalize(value, Normalizer.Form.NFD);
+    normalized = normalized.replaceAll("\\p{M}", "");
+    normalized = normalized.toLowerCase();
+    normalized = normalized.replaceAll("[^a-z0-9\\s]", " ");
+    normalized = normalized.trim();
+    normalized = normalized.replaceAll("\\s+", " ");
+    return normalized;
   }
 
   public int getQueueSize() {

@@ -100,6 +100,11 @@ public class AdminController {
         return ResponseEntity.ok(queueSize);
     }
 
+    @GetMapping("/top-10/last-30-days")
+    public ResponseEntity<List<Map<String, Object>>> getTop10Last30Days() {
+        return ResponseEntity.ok(musicQueueService.getTop10MaisPedidasUltimos30Dias());
+    }
+
     @PostMapping("/player/pause")
     public ResponseEntity<?> pausePlayer() {
         playerStateService.pause();

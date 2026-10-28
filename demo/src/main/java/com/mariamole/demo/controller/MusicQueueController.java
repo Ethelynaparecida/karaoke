@@ -155,6 +155,11 @@ public class MusicQueueController {
         return ResponseEntity.ok(queueSize);
     }
 
+    @GetMapping("/top-10/last-30-days")
+    public ResponseEntity<List<Map<String, Object>>> getTop10Last30Days() {
+        return ResponseEntity.ok(musicQueueService.getTop10MaisPedidasUltimos30Dias());
+    }
+
     @PostMapping("/error/notify")
     public ResponseEntity<?> notifyVideoError(@RequestBody Map<String, String> payload) {
         String videoId = payload.get("videoId");
