@@ -20,6 +20,8 @@ import com.mariamole.demo.model.MusicaFila;
 import com.mariamole.demo.service.MusicQueueService;
 import com.mariamole.demo.service.PlayerStateService;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/api/queue")
 @CrossOrigin(origins = "*")
@@ -37,7 +39,7 @@ public class MusicQueueController {
 
     
     @PostMapping("/add")
-    public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload) {
+    public ResponseEntity<?> addSong(@RequestBody Map<String, String> payload, HttpServletRequest request) {
         
         if (playerStateService.isQueueLocked()) {
             return ResponseEntity.status(HttpStatus.LOCKED).body("A fila está temporariamente fechada pelo admin.");
@@ -51,8 +53,16 @@ public class MusicQueueController {
         if (telefone == null || videoId == null || nome == null || titulo == null) {
             return ResponseEntity.badRequest().body("Dados incompletos.");
         }
+
+        String ipUsuario = request.getHeader("X-Forwarded-For");
+        if (ipUsuario == null || ipUsuario.isEmpty() || "unknown".equalsIgnoreCase(ipUsuario)) {
+            ipUsuario = request.getRemoteAddr();
+        }
+        if (ipUsuario != null && ipUsuario.contains(",")) {
+            ipUsuario = ipUsuario.split(",")[0].trim();
+        }
         
-        int position = musicQueueService.addSong(telefone, videoId, titulo, nome);
+        int position = musicQueueService.addSong(telefone, videoId, titulo, nome, ipUsuario);
         
         if (position == -2) { // -2 significa que o utilizador já tem música
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Utilizador já tem uma música na fila.");
@@ -76,6 +86,34 @@ public class MusicQueueController {
         return ResponseEntity.ok().build(); // Fila vazia
     }
 
+    @PostMapping("/cancel")
+    public ResponseEntity<?> cancelSong(@RequestBody Map<String, String> payload) {
+        String telefone = payload.get("telefone");
+        String mensagem = payload.get("mensagem");
+
+        if (telefone == null) {
+            return ResponseEntity.badRequest().body("O telefone do utilizador é obrigatório.");
+        }
+
+        boolean cancelada = musicQueueService.cancelarMusica(telefone, mensagem);
+        
+        if (cancelada) {
+            return ResponseEntity.ok(Map.of("message", "Música cancelada e utilizador notificado."));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("erro", "Nenhuma música pendente encontrada para este utilizador."));
+        }
+    }
+
+    @GetMapping("/cancel-status/{telefone}")
+    public ResponseEntity<?> checkCancelStatus(@PathVariable String telefone) {
+        String mensagem = musicQueueService.checarMensagemCancelamento(telefone);
+        
+        if (mensagem != null) {
+            return ResponseEntity.ok(Map.of("cancelada", true, "mensagem", mensagem));
+        }
+        return ResponseEntity.ok(Map.of("cancelada", false));
+    }
   
     @PostMapping("/complete")
     public ResponseEntity<?> completeSong(@RequestBody Map<String, String> payload) {
